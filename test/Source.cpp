@@ -99,10 +99,8 @@ typedef std::deque<chat_message> chat_message_queue;
 class chat_client
 {
 public:
-	chat_client(boost::asio::io_service& io_service,
-		tcp::resolver::iterator endpoint_iterator)
-		: io_service_(io_service),
-		socket_(io_service)
+	chat_client(boost::asio::io_service& io_service, tcp::resolver::iterator endpoint_iterator)
+		: io_service_(io_service), socket_(io_service)
 	{
 		do_connect(endpoint_iterator);
 	}
@@ -110,15 +108,11 @@ public:
 	void write(const chat_message& msg)
 	{
 		io_service_.post(
-			[this, msg]()
-		{
-			bool write_in_progress = !write_msgs_.empty();
-			write_msgs_.push_back(msg);
-			if (!write_in_progress)
-			{
-				do_write();
-			}
-		});
+			[this, msg]() {
+				bool write_in_progress = !write_msgs_.empty();
+				write_msgs_.push_back(msg);
+				if (!write_in_progress) { do_write(); }
+			});
 	}
 
 	void close()
