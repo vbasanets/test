@@ -27,7 +27,26 @@ struct ResourceAddress
 	std::string host;
 	std::string link;
 };
-
+std::string inosmi_link(const std::string & month, const std::string & year)
+{
+	std::string link;
+	return link;
+}
+std::string ukraina_link(const std::string & month, const std::string & year)
+{
+	std::string link;
+	return link;
+}
+std::string tass_link(const std::string & month, const std::string & year)
+{
+	std::string link;
+	return link;
+}
+std::string rt_link(const std::string & month, const std::string & year)
+{
+	std::string link;
+	return link;
+}
 std::string client(const std::string & port,
 	const std::string & host, const std::string & link)
 {
@@ -121,9 +140,19 @@ std::vector<ResourceAddress> download_from(const std::string & resource_name)
 	}
 	return addresses_vector;
 }
-std::string link_parse(std::string & )
+std::string link_parse(const std::string & host,
+	const std::string & month, const std::string & year)
 {
-
+	std::string link;
+	if (host == "inosmi.ru")
+		link = inosmi_link(month, year);
+	else if (host == "ukraina.ru")
+		link = ukraina_link(month, year);
+	else if (host == "tass.ru")
+		link = tass_link(month, year);
+	else
+		link = rt_link(month, year);
+	return link;
 }
 void upload_to(const std::string & resource_name)
 {
@@ -153,6 +182,7 @@ int main(int argc, char * argv[])
 		std::vector<ResourceAddress> addresses_vector =
 			download_from("d:/in_files/in_host_names.txt");
 		std::ofstream out("d:/test_out_2.txt");
+
 		out << client(port, host, link) << std::endl;
 	}
 	catch (std::exception& e)
