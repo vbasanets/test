@@ -91,7 +91,6 @@ std::string client(const std::string & port,
 	if (response.size() > 0)
 		all_responce << &response;
 	
-
 	// Read until EOF, writing data to output as we go.
 	
 	while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
@@ -111,32 +110,49 @@ std::vector<ResourceAddress> download_from(const std::string & resource_name)
 		exit(EXIT_FAILURE);
 	}
 	std::string some_string;
-	std::vector<ResourceAddress> vector_addresses;
+	std::vector<ResourceAddress> addresses_vector;
 	while (getline(fin, some_string))
 	{
 		std::istringstream iss(some_string);
 		ResourceAddress one_address;
 		iss >> one_address.port;
 		iss >> one_address.host;
-		iss >> one_address.link;
-		vector_addresses.push_back(one_address);
+		addresses_vector.push_back(one_address);
 	}
-	return vector_addresses;
+	return addresses_vector;
+}
+std::string link_parse(std::string & )
+{
+
+}
+void upload_to(const std::string & resource_name)
+{
+
+	std::cout << "Upload completed successfully!" << std::endl;
 }
 int main(int argc, char * argv[])
 {
-	if (argc != 2)
+	// argv[1] - file name with host and port names
+	// argv[2] - Month in numerical form
+	// argv[3] - year
+
+	if (argc != 4)
 	{
-		std::cout << "Usage: <filename.txt>\nExample:\ntest.exe filename.txt\n";
+		std::cout << "Usage: <filename.txt> <mount> <year>\n";
+		std::cout << "Example:\n";
+		std::cout << " test.exe filename.txt 5 2017\n";
 		return 1;
 	}
 
-	std::string port = "http";
+	/*std::string port = "http";
 	std::string host = "ukraina.ru";
-	std::string link = "/news/20170502/1018610569.html";
-	std::ofstream out("d:/test_out_2.txt");
+	std::string link = "/news/20170502/1018610569.html";*/
+	
 	try
 	{
+		std::vector<ResourceAddress> addresses_vector =
+			download_from("d:/in_files/in_host_names.txt");
+		std::ofstream out("d:/test_out_2.txt");
 		out << client(port, host, link) << std::endl;
 	}
 	catch (std::exception& e)
