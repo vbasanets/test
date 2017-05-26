@@ -14,6 +14,7 @@
 #include <string>
 #include <fstream>
 #include <vector>
+#include <set>
 #include <boost/asio.hpp>
 
 #pragma comment(lib, "libeay32.lib")
@@ -21,14 +22,6 @@
 
 using boost::asio::ip::tcp;
 
-std::string query = "%D1%83%D0%BA%D1%80%D0%B0%D0%B8%D0%BD%D0%B0";
-
-struct ResourceAddress
-{
-	std::string port;
-	std::string host;
-	std::string link;
-};
 template<typename T> std::string to_str(T x)
 {
 	std::ostringstream oss;
@@ -68,6 +61,57 @@ std::string numbers_to_date(size_t x, size_t y, size_t z, const std::string & se
 	else oss << z;
 	return oss.str();
 }
+
+std::string query = "%D1%83%D0%BA%D1%80%D0%B0%D0%B8%D0%BD%D0%B0";
+
+struct ResourceAddress
+{
+	std::string port;
+	std::string host;
+	std::set<std::string> link;
+};
+class HelperClass
+{
+	size_t limit_;
+	size_t month_;
+	size_t year_;
+	size_t all_days_;
+public:
+	HelperClass(const std::string & month, const std::string & year, size_t limit = 0)
+		: month_(to_number<size_t>(month)), year_(to_number<size_t>(year)), limit_(limit),
+		all_days_(0) {}
+	size_t count_days()
+	{
+		switch (month_)
+		{
+		case 1:
+		case 3:
+		case 5:
+		case 7:
+		case 8:
+		case 10:
+		case 12:
+			all_days_ = 31;
+			return 31;
+		case 4:
+		case 6:
+		case 9:
+		case 11:
+			all_days_ = 30;
+			return 30;
+		case 2:
+			all_days_ = 29;
+			return 29;
+		default:
+			throw std::exception("Invalid month!!!");
+		}
+	}
+	size_t limit() { return limit_; }
+	size_t month() { return month_; }
+	size_t year() { return year_; }
+	size_t all_days() { return all_days_; }
+};
+
 int days_in_month(size_t month)
 {
 	switch (month)
@@ -93,39 +137,37 @@ int days_in_month(size_t month)
 }
 std::string inosmi_link(const std::string & month, const std::string & year)
 {
-	size_t limit = 0;
-	size_t month_ = to_number<size_t>(month);
-	size_t year_ = to_number<size_t>(year);
-	size_t all_days = days_in_month(month_);
+	HelperClass helper(month, year, 100);
+	helper.count_days();
+
 	std::string link =
-		"/services/search/getmore/?search_area=all&date_from=" + numbers_to_date(year_, month_, 1, "-") +
-		"&date_to=" + numbers_to_date(year_, month_, all_days, "-") +
-		"&query%5B%5D=" + query + "&limit=" + to_str(limit) + "&offset=";
+		"/services/search/getmore/?search_area=all&date_from=" + numbers_to_date(helper.year(), helper.month(), 1, "-") +
+		"&date_to=" + numbers_to_date(helper.year(), helper.month(), helper.all_days(), "-") +
+		"&query%5B%5D=" + query + "&limit=" + to_str(helper.limit()) + "&offset=";
+
 	return link;
 }
 std::string ukraina_link(const std::string & month, const std::string & year)
 {
-	size_t month_ = to_number<size_t>(month);
-	size_t year_ = to_number<size_t>(year);
-	std::string link = "/archive/" + numbers_to_date(year_, month_, 1, "") + "/calendar.html";
+	HelperClass helper(month, year);
+	helper.count_days();
+
+	std::string link = "/archive/" + numbers_to_date(helper.year(), helper.month(), 1, "") + "/calendar.html";
 	return link;
 }
 std::string tass_link(const std::string & month, const std::string & year)
 {
-
 	std::string link;
 	return link;
 }
 std::string rt_link(const std::string & month, const std::string & year)
 {
-	size_t limit = 10;
-	size_t month_ = to_number<size_t>(month);
-	size_t year_ = to_number<size_t>(year);
-	size_t all_days = days_in_month(month_);
+	HelperClass helper(month, year, 10);
+	helper.count_days();
 
 	std::string link = "/search?q=" + query + "&type=News&df="
-		+ numbers_to_date(1, month_, year_, "-") + "&dt="
-		+ numbers_to_date(all_days, month_, year_, "-") + "&page=";
+		+ numbers_to_date(1, helper.month(), helper.year(), "-") + "&dt="
+		+ numbers_to_date(helper.all_days(), helper.month(), helper.year(), "-") + "&page=";
 	return link;
 }
 std::string client(const std::string & port,
@@ -187,7 +229,7 @@ std::string client(const std::string & port,
 	std::ostringstream all_responce;
 	while (std::getline(response_stream, header) && header != "\r")
 		all_responce << header << "\n";
-	all_responce << "-------------------------------------------------------------------------------------------------------\n";
+	//all_responce << "-------------------------------------------------------------------------------------------------------\n";
 	if (response.size() > 0)
 		all_responce << &response;
 	
@@ -195,7 +237,8 @@ std::string client(const std::string & port,
 	
 	while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
 		all_responce << &response << "\n";
-	all_responce << "-------------------------------------------------------------------------------------------------------\n";
+	
+	//all_responce << "-------------------------------------------------------------------------------------------------------\n";
 	
 	if (error != boost::asio::error::eof)
 		throw boost::system::system_error(error);
