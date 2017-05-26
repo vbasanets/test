@@ -21,30 +21,111 @@
 
 using boost::asio::ip::tcp;
 
+std::string query = "%D1%83%D0%BA%D1%80%D0%B0%D0%B8%D0%BD%D0%B0";
+
 struct ResourceAddress
 {
 	std::string port;
 	std::string host;
 	std::string link;
 };
+template<typename T> std::string to_str(T x)
+{
+	std::ostringstream oss;
+	oss << x;
+	return oss.str();
+}
+template<typename T> T to_number(std::string x)
+{
+	std::istringstream iss(x);
+	T n;
+	iss >> n;
+	return n;
+}
+template<typename T> T pull_number(std::string x)
+{
+	std::string number;
+	std::istringstream iss(x);
+	char ch;
+	iss.get(ch);
+	while (!iss.eof())
+	{
+		if (isdigit(ch))
+			number += ch;
+		iss.get(ch);
+	}
+
+	return to_number<T>(number);
+}
+std::string numbers_to_date(size_t x, size_t y, size_t z, const std::string & separator)
+{
+	std::ostringstream oss;
+	if (x < 10) oss << "0" << x << separator;
+	else oss << x << separator;
+	if (y < 10) oss << "0" << y << separator;
+	else oss << y << separator;
+	if (z < 10) oss << "0" << z;
+	else oss << z;
+	return oss.str();
+}
+int days_in_month(size_t month)
+{
+	switch (month)
+	{
+	case 1:
+	case 3:
+	case 5:
+	case 7:
+	case 8:
+	case 10:
+	case 12:
+		return 31;
+	case 4:
+	case 6:
+	case 9:
+	case 11:
+		return 30;
+	case 2:
+		return 29;
+	default:
+		throw std::exception("Invalid month!!!");
+	}
+}
 std::string inosmi_link(const std::string & month, const std::string & year)
 {
-	std::string link;
+	size_t limit = 0;
+	size_t month_ = to_number<size_t>(month);
+	size_t year_ = to_number<size_t>(year);
+	size_t all_days = days_in_month(month_);
+	std::string link =
+		"/services/search/getmore/?search_area=all&date_from=" + numbers_to_date(year_, month_, 1, "-") +
+		"&date_to=" + numbers_to_date(year_, month_, all_days, "-") +
+		"&query%5B%5D=" + query + "&limit=" + to_str(limit) + "&offset=";
 	return link;
 }
 std::string ukraina_link(const std::string & month, const std::string & year)
 {
-	std::string link;
+	size_t month_ = to_number<size_t>(month);
+	size_t year_ = to_number<size_t>(year);
+	std::string link = "/archive/" + numbers_to_date(year_, month_, 1, "") + "/calendar.html";
 	return link;
 }
 std::string tass_link(const std::string & month, const std::string & year)
 {
+
 	std::string link;
 	return link;
 }
 std::string rt_link(const std::string & month, const std::string & year)
 {
-	std::string link;
+	size_t limit = 10;
+	size_t month_ = to_number<size_t>(month);
+	size_t year_ = to_number<size_t>(year);
+	size_t all_days = days_in_month(month_);
+
+	std::string link = "/search?q=" + query + "&type=News&df="
+		+ numbers_to_date(1, month_, year_, "-") + "&dt="
+		+ numbers_to_date(all_days, month_, year_, "-") + "&page=";
 	return link;
 }
 std::string client(const std::string & port,
@@ -172,18 +253,17 @@ int main(int argc, char * argv[])
 		std::cout << " test.exe filename.txt 5 2017\n";
 		return 1;
 	}
-
-	/*std::string port = "http";
-	std::string host = "ukraina.ru";
-	std::string link = "/news/20170502/1018610569.html";*/
-	
+		
 	try
 	{
 		std::vector<ResourceAddress> addresses_vector =
 			download_from("d:/in_files/in_host_names.txt");
-		std::ofstream out("d:/test_out_2.txt");
+		
+		std::for_each( addresses_vector.begin(), addresses_vector.end(),
+			[argv](ResourceAddress & addr) { addr.link = link_parse(addr.host, argv[2], argv[3]); }
+		);
 
-		out << client(port, host, link) << std::endl;
+
 	}
 	catch (std::exception& e)
 	{
