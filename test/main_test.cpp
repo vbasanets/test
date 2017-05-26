@@ -80,12 +80,13 @@ std::string client(const std::string & port,
 	// Process the response headers.
 	std::string header;
 	std::ostringstream all_responce;
+	/*/
 	while (std::getline(response_stream, header) && header != "\r")
 		all_responce << header << "\n";
 	//all_responce << "-------------------------------------------------------------------------------------------------------\n";
 	if (response.size() > 0)
 		all_responce << &response;
-
+		*/
 	// Read until EOF, writing data to output as we go.
 
 	while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
@@ -103,8 +104,8 @@ int main()
 
 	try
 	{
-		
-
+		std::ofstream out("d:/test.txt");
+		out << client("http", "ukraina.ru", "/news/20170402/1018480062.html");
 
 	}
 	catch (std::exception& e)

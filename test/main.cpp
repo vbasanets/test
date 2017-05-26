@@ -135,19 +135,21 @@ int days_in_month(size_t month)
 		throw std::exception("Invalid month!!!");
 	}
 }
-std::string inosmi_link(const std::string & month, const std::string & year)
+std::string inosmi_link(const ResourceAddress & addr,
+	const std::string & month, const std::string & year)
 {
 	HelperClass helper(month, year, 100);
 	helper.count_days();
-
 	std::string link =
 		"/services/search/getmore/?search_area=all&date_from=" + numbers_to_date(helper.year(), helper.month(), 1, "-") +
 		"&date_to=" + numbers_to_date(helper.year(), helper.month(), helper.all_days(), "-") +
 		"&query%5B%5D=" + query + "&limit=" + to_str(helper.limit()) + "&offset=";
-
+	if (client(addr.host, addr.port, link + to_str(0)).size() == 0)
+		exit(0);
 	return link;
 }
-std::string ukraina_link(const std::string & month, const std::string & year)
+std::string ukraina_link(const ResourceAddress & addr,
+	const std::string & month, const std::string & year)
 {
 	HelperClass helper(month, year);
 	helper.count_days();
@@ -155,12 +157,12 @@ std::string ukraina_link(const std::string & month, const std::string & year)
 	std::string link = "/archive/" + numbers_to_date(helper.year(), helper.month(), 1, "") + "/calendar.html";
 	return link;
 }
-std::string tass_link(const std::string & month, const std::string & year)
+std::string tass_link(const ResourceAddress & addr, const std::string & month, const std::string & year)
 {
 	std::string link;
 	return link;
 }
-std::string rt_link(const std::string & month, const std::string & year)
+std::string rt_link(const ResourceAddress & addr, const std::string & month, const std::string & year)
 {
 	HelperClass helper(month, year, 10);
 	helper.count_days();
@@ -168,6 +170,20 @@ std::string rt_link(const std::string & month, const std::string & year)
 	std::string link = "/search?q=" + query + "&type=News&df="
 		+ numbers_to_date(1, helper.month(), helper.year(), "-") + "&dt="
 		+ numbers_to_date(helper.all_days(), helper.month(), helper.year(), "-") + "&page=";
+	return link;
+}
+std::string link_parse(const ResourceAddress & addr,
+	const std::string & month, const std::string & year)
+{
+	std::string link;
+	if (addr.host == "inosmi.ru")
+		link = inosmi_link(addr, month, year);
+	else if (addr.host == "ukraina.ru")
+		link = ukraina_link(addr, month, year);
+	else if (addr.host == "tass.ru")
+		link = tass_link(addr, month, year);
+	else
+		link = rt_link(addr, month, year);
 	return link;
 }
 std::string client(const std::string & port,
@@ -227,12 +243,13 @@ std::string client(const std::string & port,
 	// Process the response headers.
 	std::string header;
 	std::ostringstream all_responce;
+	/*
 	while (std::getline(response_stream, header) && header != "\r")
 		all_responce << header << "\n";
 	//all_responce << "-------------------------------------------------------------------------------------------------------\n";
 	if (response.size() > 0)
 		all_responce << &response;
-	
+	*/
 	// Read until EOF, writing data to output as we go.
 	
 	while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
@@ -264,20 +281,7 @@ std::vector<ResourceAddress> download_from(const std::string & resource_name)
 	}
 	return addresses_vector;
 }
-std::string link_parse(const std::string & host,
-	const std::string & month, const std::string & year)
-{
-	std::string link;
-	if (host == "inosmi.ru")
-		link = inosmi_link(month, year);
-	else if (host == "ukraina.ru")
-		link = ukraina_link(month, year);
-	else if (host == "tass.ru")
-		link = tass_link(month, year);
-	else
-		link = rt_link(month, year);
-	return link;
-}
+
 void upload_to(const std::string & resource_name)
 {
 
