@@ -13,12 +13,20 @@
 #include <ostream>
 #include <string>
 #include <fstream>
+#include <vector>
 #include <boost/asio.hpp>
 
 #pragma comment(lib, "libeay32.lib")
 #pragma comment(lib, "ssleay32.lib")
 
 using boost::asio::ip::tcp;
+
+struct ResourceAddress
+{
+	std::string port;
+	std::string host;
+	std::string link;
+};
 
 std::string client(const std::string & port,
 	const std::string & host, const std::string & link)
@@ -77,27 +85,56 @@ std::string client(const std::string & port,
 	// Process the response headers.
 	std::string header;
 	std::ostringstream all_responce;
-	while (std::getline(response_stream, header))
+	while (std::getline(response_stream, header) && header != "\r")
 		all_responce << header << "\n";
 	all_responce << "-------------------------------------------------------------------------------------------------------\n";
+	if (response.size() > 0)
+		all_responce << &response;
+	
 
 	// Read until EOF, writing data to output as we go.
+	
 	while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
-	{
-		std::getline(response_stream, header);
-		all_responce << header << "\n";
-	}
+		all_responce << &response << "\n";
 	all_responce << "-------------------------------------------------------------------------------------------------------\n";
+	
 	if (error != boost::asio::error::eof)
 		throw boost::system::system_error(error);
 	return all_responce.str();
 }
-int main()
+std::vector<ResourceAddress> download_from(const std::string & resource_name)
 {
+	std::ifstream fin(resource_name.c_str());
+	if (!fin)
+	{
+		std::cerr << "Can't open file \' " << resource_name << " \'" << std::endl;
+		exit(EXIT_FAILURE);
+	}
+	std::string some_string;
+	std::vector<ResourceAddress> vector_addresses;
+	while (getline(fin, some_string))
+	{
+		std::istringstream iss(some_string);
+		ResourceAddress one_address;
+		iss >> one_address.port;
+		iss >> one_address.host;
+		iss >> one_address.link;
+		vector_addresses.push_back(one_address);
+	}
+	return vector_addresses;
+}
+int main(int argc, char * argv[])
+{
+	if (argc != 2)
+	{
+		std::cout << "Usage: <filename.txt>\nExample:\ntest.exe filename.txt\n";
+		return 1;
+	}
+
 	std::string port = "http";
 	std::string host = "ukraina.ru";
-	std::string link = "/archive/20170502/";
-	std::ofstream out("d:/test_out.txt");
+	std::string link = "/news/20170502/1018610569.html";
+	std::ofstream out("d:/test_out_2.txt");
 	try
 	{
 		out << client(port, host, link) << std::endl;
