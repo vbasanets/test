@@ -144,6 +144,9 @@ std::string inosmi_link(const ResourceAddress & addr,
 		"/services/search/getmore/?search_area=all&date_from=" + numbers_to_date(helper.year(), helper.month(), 1, "-") +
 		"&date_to=" + numbers_to_date(helper.year(), helper.month(), helper.all_days(), "-") +
 		"&query%5B%5D=" + query + "&limit=" + to_str(helper.limit()) + "&offset=";
+	
+	// !!!!!!! Создать класс обработчик первых и вторых линков, и использовать его в мейне. !!!!!!!!
+
 	if (client(addr.host, addr.port, link + to_str(0)).size() == 0)
 		exit(0);
 	return link;
