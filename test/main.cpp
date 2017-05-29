@@ -76,74 +76,52 @@ class HelperClass
 	size_t month_;
 	size_t year_;
 	size_t all_days_;
+	std::string first_;
+
 public:
 	HelperClass(const std::string & month, const std::string & year, size_t limit = 0)
 		: month_(to_number<size_t>(month)), year_(to_number<size_t>(year)), limit_(limit),
 		all_days_(0) {}
-	size_t count_days()
+	
+	std::string first(const std::string & prefix, const std::string & separator, const )
 	{
-		switch (month_)
-		{
-		case 1:
-		case 3:
-		case 5:
-		case 7:
-		case 8:
-		case 10:
-		case 12:
-			all_days_ = 31;
-			return 31;
-		case 4:
-		case 6:
-		case 9:
-		case 11:
-			all_days_ = 30;
-			return 30;
-		case 2:
-			all_days_ = 29;
-			return 29;
-		default:
-			throw std::exception("Invalid month!!!");
-		}
-	}
+		std::string link =
+			"/services/search/getmore/?search_area=all&date_from=" + numbers_to_date(helper.year(), helper.month(), 1, "-") +
+			"&date_to=" + numbers_to_date(helper.year(), helper.month(), helper.all_days(), "-") +
+			"&query%5B%5D=" + query + "&limit=" + to_str(helper.limit()) + "&offset=";
+	}	
 	size_t limit() { return limit_; }
 	size_t month() { return month_; }
 	size_t year() { return year_; }
 	size_t all_days() { return all_days_; }
+	size_t days_count() { all_days_ = days_in_month(month_); }
 };
 
-int days_in_month(size_t month)
+size_t days_in_month(const std::string & month)
 {
-	switch (month)
-	{
-	case 1:
-	case 3:
-	case 5:
-	case 7:
-	case 8:
-	case 10:
-	case 12:
+	if (month == "January" || month == "january" || month == "Jan" || month == "jan" ||
+		month == "March" || month == "march" || month == "Mar" || month == "mar" ||
+		month == "May" || month == "may" ||
+		month == "July" || month == "july" || month == "Jul" || month == "jul" ||
+		month == "August" || month == "august" || month == "Aug" || month == "aug" ||
+		month == "October" || month == "october" || month == "Oct" || month == "oct" ||
+		month == "December" || month == "december" || month == "Dec" || month == "dec")
 		return 31;
-	case 4:
-	case 6:
-	case 9:
-	case 11:
+	else if (month == "April" || month == "april" || month == "Apr" || month == "apr" ||
+		month == "Jun" || month == "Jun" ||
+		month == "September" || month == "september" || month == "Sep" || month == "sep" ||
+		month == "November" || month == "november" || month == "Nov" || month == "nov")
 		return 30;
-	case 2:
-		return 29;
-	default:
-		throw std::exception("Invalid month!!!");
-	}
+	else if (month == "February" || month == "february" || month == "Feb" || month == "feb")
+		return 28;
+	else throw std::exception("Invalid month!!!");
 }
 std::string inosmi_link(const ResourceAddress & addr,
 	const std::string & month, const std::string & year)
 {
 	HelperClass helper(month, year, 100);
-	helper.count_days();
-	std::string link =
-		"/services/search/getmore/?search_area=all&date_from=" + numbers_to_date(helper.year(), helper.month(), 1, "-") +
-		"&date_to=" + numbers_to_date(helper.year(), helper.month(), helper.all_days(), "-") +
-		"&query%5B%5D=" + query + "&limit=" + to_str(helper.limit()) + "&offset=";
+	helper.days_count();
+	helper.first();
 	if (client(addr.host, addr.port, link + to_str(0)).size() == 0)
 		exit(0);
 	return link;
@@ -289,15 +267,21 @@ void upload_to(const std::string & resource_name)
 }
 int main(int argc, char * argv[])
 {
-	// argv[1] - file name with host and port names
-	// argv[2] - Month in numerical form
-	// argv[3] - year
+	/*
+	****************************************************
+		
+		argv[1] - file name with host and port names
+		argv[2] - Month
+		argv[3] - year
+
+	****************************************************
+	*/
 
 	if (argc != 4)
 	{
 		std::cout << "Usage: <filename.txt> <mount> <year>\n";
 		std::cout << "Example:\n";
-		std::cout << " test.exe filename.txt 5 2017\n";
+		std::cout << " test.exe filename.txt may 2017\n";
 		return 1;
 	}
 		
