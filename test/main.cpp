@@ -81,8 +81,7 @@ class HelperClass
 public:
 	HelperClass(const std::string & month, const std::string & year, size_t limit = 0)
 		: month_(to_number<size_t>(month)), year_(to_number<size_t>(year)), limit_(limit),
-		all_days_(0) {}
-	
+		all_days_(0) {}	
 	std::string first(const std::string & prefix, const std::string & separator, const )
 	{
 		std::string link =
@@ -239,6 +238,7 @@ std::string client(const std::string & port,
 		throw boost::system::system_error(error);
 	return all_responce.str();
 }
+/*
 std::vector<ResourceAddress> download_from(const std::string & resource_name)
 {
 	std::ifstream fin(resource_name.c_str());
@@ -259,7 +259,7 @@ std::vector<ResourceAddress> download_from(const std::string & resource_name)
 	}
 	return addresses_vector;
 }
-
+*/
 void upload_to(const std::string & resource_name)
 {
 
@@ -269,8 +269,7 @@ int main(int argc, char * argv[])
 {
 	/*
 	****************************************************
-		
-		argv[1] - file name with host and port names
+		argv[1] - name Host
 		argv[2] - Month
 		argv[3] - year
 
@@ -279,19 +278,25 @@ int main(int argc, char * argv[])
 
 	if (argc != 4)
 	{
-		std::cout << "Usage: <filename.txt> <mount> <year>\n";
+		std::cout << "Usage: <mount> <year>\n";
 		std::cout << "Example:\n";
-		std::cout << " test.exe filename.txt may 2017\n";
+		std::cout << " may 2017\n";
 		return 1;
 	}
-		
+	std::vector<std::string> hosts {
+		"inosmi.ru",
+		"ukraina.ru",
+		"russian.rt.com",
+		"tass.ru"
+	};
+
 	try
 	{
-		std::vector<ResourceAddress> addresses_vector =
-			download_from("d:/in_files/in_host_names.txt");
-		
-		std::for_each( addresses_vector.begin(), addresses_vector.end(),
-			[argv](ResourceAddress & addr) { addr.link = link_parse(addr.host, argv[2], argv[3]); }
+		auto lambda = [argv](std::string & x) {
+			if(argv[1] == x)
+		};
+		std::for_each(hosts.begin(), hosts.end(),
+			[argv](std::string & x) { addr.link = link_parse(addr.host, argv[2], argv[3]); }
 		);
 
 
