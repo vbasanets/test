@@ -352,15 +352,15 @@ int main(int argc, char * argv[])
 			
 			int sumAllPosts = pullNumber<int>(raw);
 			int sumRequests = integerPath(sumAllPosts, limit);
-
-			srand(time(0));
+			
+			srand((unsigned int)time(0));
 			for (int i = 0; i < sumRequests; ++i)
 			{
-				client(host, sufix + prefix + toStr(i*limit));
+				raw = client(host, sufix + prefix + toStr(i*limit));
 				timeDelay(rand() / 5000);
 			}
 
-			//testOut(raw, "d:/outFile.txt");
+			testOut(raw, "d:/outFile.txt");
 		}
 		else if (host == "ukraina.ru")
 		{
