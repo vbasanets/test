@@ -149,70 +149,78 @@ std::string monthToNumber(const std::string & month)
 std::string client(const std::string & host, const std::string & link)
 {
 	using boost::asio::ip::tcp;
-
-	boost::asio::io_service io_service;
-	// Get a list of endpoints corresponding to the server name.
-	tcp::resolver resolver(io_service);
-	tcp::resolver::query query(host, "http");
-	tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-	tcp::resolver::iterator end;
-	
-	// Try each endpoint until we successfully establish a connection.
-	tcp::socket socket(io_service);
-	boost::system::error_code error = boost::asio::error::host_not_found;
-	while (error && endpoint_iterator != end)
+	try
 	{
-		socket.close();
-		socket.connect(*endpoint_iterator++, error);
+		boost::asio::io_service io_service;
+		// Get a list of endpoints corresponding to the server name.
+		tcp::resolver resolver(io_service);
+		tcp::resolver::query query(host, "http");
+		tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+		tcp::resolver::iterator end;
+
+		// Try each endpoint until we successfully establish a connection.
+		tcp::socket socket(io_service);
+		boost::system::error_code error = boost::asio::error::host_not_found;
+		while (error && endpoint_iterator != end)
+		{
+			socket.close();
+			socket.connect(*endpoint_iterator++, error);
+		}
+		if (error)
+			throw boost::system::system_error(error);
+
+		/*	Form the request. We specify the "Connection: close" header so that the
+		server will close the socket after transmitting the response. This will
+		allow us to treat all data up until the EOF as the content.	*/
+		boost::asio::streambuf request;
+		std::ostream request_stream(&request);
+		request_stream << "GET " << link << " HTTP/1.0\r\n";
+		request_stream << "Host: " << host << "\r\n";
+		request_stream << "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:47.0) Gecko/20100101 Firefox/47.0\r\n";
+		request_stream << "Accept: */*\r\n";
+		request_stream << "Connection: close\r\n\r\n";
+
+		// Send the request.
+		boost::asio::write(socket, request);
+		// Read the response status line.
+		boost::asio::streambuf response;
+		boost::asio::read_until(socket, response, "\r\n"); std::cout << "Read #1/t";// #1
+
+		// Check that response is OK.
+		std::istream response_stream(&response);
+		std::string http_version;
+		response_stream >> http_version;
+
+		unsigned int status_code;
+		response_stream >> status_code;
+
+		std::string status_message;
+		std::getline(response_stream, status_message);
+
+		if (!response_stream || http_version.substr(0, 5) != "HTTP/")
+			throw std::string("Invalid response") + http_version;
+		if (status_code != 200)
+			throw std::string("Response returned with status code ") + toStr(status_code);
+
+		// Read the response headers, which are terminated by a blank line.
+		boost::asio::read_until(socket, response, "\r\n\r\n");	std::cout << "Read #2/t";// #2
+		// Process the response headers.
+		std::string header;
+		std::ostringstream all_responce;
+
+		// Read until EOF, writing data to output as we go.
+		while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) // #3
+			all_responce << &response << "\n";
+		std::cout << "Read #3/n";
+		if (error != boost::asio::error::eof)
+			throw boost::system::system_error(error);
+		return all_responce.str();
 	}
-	if (error)
-		throw boost::system::system_error(error);
-
-	/*	Form the request. We specify the "Connection: close" header so that the
-	server will close the socket after transmitting the response. This will
-	allow us to treat all data up until the EOF as the content.	*/
-	boost::asio::streambuf request;
-	std::ostream request_stream(&request);
-	request_stream << "GET " << link << " HTTP/1.0\r\n";
-	request_stream << "Host: " << host << "\r\n";
-	request_stream << "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:47.0) Gecko/20100101 Firefox/47.0\r\n";
-	request_stream << "Accept: */*\r\n";
-	request_stream << "Connection: close\r\n\r\n";
-	
-	// Send the request.
-	boost::asio::write(socket, request);
-	// Read the response status line.
-	boost::asio::streambuf response;
-	boost::asio::read_until(socket, response, "\r\n");
-
-	// Check that response is OK.
-	std::istream response_stream(&response);
-	std::string http_version;
-	response_stream >> http_version;
-
-	unsigned int status_code;
-	response_stream >> status_code;
-
-	std::string status_message;
-	std::getline(response_stream, status_message);
-	
-	if (!response_stream || http_version.substr(0, 5) != "HTTP/")
-		throw std::string("Invalid response") + http_version;
-	if (status_code != 200)
-		throw std::string("Response returned with status code ") + toStr(status_code);
-
-	// Read the response headers, which are terminated by a blank line.
-	boost::asio::read_until(socket, response, "\r\n\r\n");
-	// Process the response headers.
-	std::string header;
-	std::ostringstream all_responce;
-	
-	// Read until EOF, writing data to output as we go.
-	while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
-		all_responce << &response << "\n";
-	if (error != boost::asio::error::eof)
-		throw boost::system::system_error(error);
-	return all_responce.str();
+	catch (std::exception & ex)
+	{
+		std::cout << "Exception from function client(): " << ex.what() << std::endl;
+		return std::string();
+	}
 }
 std::string client(const std::string & host, const std::string & link,
 	const std::string & port)
@@ -221,67 +229,76 @@ std::string client(const std::string & host, const std::string & link,
 	using boost::asio::ssl::context;
 	using boost::asio::ssl::stream;
 	using boost::asio::ssl::rfc2818_verification;
+	try
+	{
+		boost::asio::io_service io_service;
+		// Get a list of endpoints corresponding to the server name.
+		tcp::resolver resolver(io_service);
+		tcp::resolver::query query(host, port);
+		tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
+		tcp::resolver::iterator end;
 
-	boost::asio::io_service io_service;
-	// Get a list of endpoints corresponding to the server name.
-	tcp::resolver resolver(io_service);
-	tcp::resolver::query query(host, port);
-	tcp::resolver::iterator endpoint_iterator = resolver.resolve(query);
-	tcp::resolver::iterator end;
+		// Try each endpoint until we successfully establish a connection.
+		context ctx(context::sslv23);
+		ctx.set_default_verify_paths();
+		stream<tcp::socket> socket(io_service, ctx);
 
-	// Try each endpoint until we successfully establish a connection.
-	context ctx(context::sslv23);
-	ctx.set_default_verify_paths();
-	stream<tcp::socket> socket(io_service, ctx);
+		/*	Form the request. We specify the "Connection: close" header so that the
+		server will close the socket after transmitting the response. This will
+		allow us to treat all data up until the EOF as the content.	*/
+		boost::asio::streambuf request;
+		std::ostream request_stream(&request);
+		request_stream << "GET " << link << " HTTP/1.0\r\n";
+		request_stream << "Host: " << host << "\r\n";
+		request_stream << "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:47.0) Gecko/20100101 Firefox/47.0\r\n";
+		request_stream << "Accept: */*\r\n";
+		request_stream << "Connection: close\r\n\r\n";
 
-	/*	Form the request. We specify the "Connection: close" header so that the
-	server will close the socket after transmitting the response. This will
-	allow us to treat all data up until the EOF as the content.	*/
-	boost::asio::streambuf request;
-	std::ostream request_stream(&request);
-	request_stream << "GET " << link << " HTTP/1.0\r\n";
-	request_stream << "Host: " << host << "\r\n";
-	request_stream << "User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:47.0) Gecko/20100101 Firefox/47.0\r\n";
-	request_stream << "Accept: */*\r\n";
-	request_stream << "Connection: close\r\n\r\n";
+		connect(socket.lowest_layer(), endpoint_iterator);
+		socket.set_verify_mode(boost::asio::ssl::verify_none);
+		socket.set_verify_callback(rfc2818_verification(host));
+		socket.handshake(stream<tcp::socket>::client);
+
+		// Send the request.
+		write(socket, request);
+
+		// Read the response status line.
+		boost::asio::streambuf response;
+		read_until(socket, response, "\r\n"); std::cout << "Read #1/n";// #1
+
+		// Check that response is OK.
+		std::istream response_stream(&response);
+		std::string http_version;
+		response_stream >> http_version;
+		unsigned int status_code;
+		response_stream >> status_code;
+
+		std::string status_message;
+		std::getline(response_stream, status_message);
+		if (!response_stream || http_version.substr(0, 5) != "HTTP/")
+			throw std::string("Invalid response") + http_version;
+		if (status_code != 200)
+			throw std::string("Response returned with status code ") + toStr(status_code);
+
+		// Read the response headers, which are terminated by a blank line.
+		read_until(socket, response, "\r\n\r\n"); std::cout << "Read #2/n";// #2
+		// Process the response headers.
+		std::string header;
+		std::ostringstream all_responce;
+		// Read until EOF, writing data to output as we go.
+		boost::system::error_code error;
+		int count = 0;
+		while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) // #3
+			all_responce << &response << "\n";
+		std::cout << "Read #3/n";
+		return all_responce.str();
+	}
+	catch (std::exception & ex)
+	{
+		std::cout << "Exception from function client() wint SSL: " << ex.what() << std::endl;
+		return std::string();
+	}
 	
-	connect(socket.lowest_layer(), endpoint_iterator);
-	socket.set_verify_mode(boost::asio::ssl::verify_none);
-	socket.set_verify_callback(rfc2818_verification(host));
-	socket.handshake(stream<tcp::socket>::client);
-
-	// Send the request.
-	write(socket, request);
-
-	// Read the response status line.
-	boost::asio::streambuf response;
-	read_until(socket, response, "\r\n");
-
-	// Check that response is OK.
-	std::istream response_stream(&response);
-	std::string http_version;
-	response_stream >> http_version;
-	unsigned int status_code;
-	response_stream >> status_code;
-
-	std::string status_message;
-	std::getline(response_stream, status_message);
-	if (!response_stream || http_version.substr(0, 5) != "HTTP/")
-		throw std::string("Invalid response") + http_version;
-	if (status_code != 200)
-		throw std::string("Response returned with status code ") + toStr(status_code);
-	
-	// Read the response headers, which are terminated by a blank line.
-	read_until(socket, response, "\r\n\r\n");
-	// Process the response headers.
-	std::string header;
-	std::ostringstream all_responce;
-	// Read until EOF, writing data to output as we go.
-	boost::system::error_code error;
-	int count = 0;
-	while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
-		all_responce << &response << "\n";
-	return all_responce.str();
 }
 std::string convertAndEncoding(const std::string& data, const std::string& from, const std::string& to)
 {
@@ -411,7 +428,7 @@ int main(int argc, char * argv[])
 			int sumAllPosts = pullNumber<int>(raw);
 			int sumRequests = integerPath(sumAllPosts, limit);
 			srand((unsigned int)time(0));
-			raw.clear();
+			raw = "";
 			for (int i = 1; i < sumRequests; ++i)
 			{
 				std::cout << "GET requests --- " << i << " --- \n";
@@ -445,9 +462,10 @@ int main(int argc, char * argv[])
 			int sumAllPosts = pullNumber<int>(raw);
 			int sumRequests = integerPath(sumAllPosts, limit);
 			srand((unsigned int)time(0));
-			raw.clear();
+			raw = "";
 			for (int i = 1; i < sumRequests; ++i)
 			{
+				std::cout << "GET requests --- " << i << " --- \n";
 				raw += client(host, sufix + prefix + toStr(i), "https");
 				timeDelay(rand() / 5000);
 			}
