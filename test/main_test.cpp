@@ -184,7 +184,7 @@ std::string client(const std::string & host, const std::string & link)
 		boost::asio::write(socket, request);
 		// Read the response status line.
 		boost::asio::streambuf response;
-		boost::asio::read_until(socket, response, "\r\n"); std::cout << "Read #1/t";// #1
+		boost::asio::read_until(socket, response, "\r\n"); std::cout << "Read #1\t";// #1
 
 		// Check that response is OK.
 		std::istream response_stream(&response);
@@ -203,7 +203,7 @@ std::string client(const std::string & host, const std::string & link)
 			throw std::string("Response returned with status code ") + toStr(status_code);
 
 		// Read the response headers, which are terminated by a blank line.
-		boost::asio::read_until(socket, response, "\r\n\r\n");	std::cout << "Read #2/t";// #2
+		boost::asio::read_until(socket, response, "\r\n\r\n");	std::cout << "Read #2\t";// #2
 		// Process the response headers.
 		std::string header;
 		std::ostringstream all_responce;
@@ -211,7 +211,7 @@ std::string client(const std::string & host, const std::string & link)
 		// Read until EOF, writing data to output as we go.
 		while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) // #3
 			all_responce << &response << "\n";
-		std::cout << "Read #3/n";
+		std::cout << "Read #3\t";
 		if (error != boost::asio::error::eof)
 			throw boost::system::system_error(error);
 		return all_responce.str();
@@ -264,7 +264,7 @@ std::string client(const std::string & host, const std::string & link,
 
 		// Read the response status line.
 		boost::asio::streambuf response;
-		read_until(socket, response, "\r\n"); std::cout << "Read #1/n";// #1
+		read_until(socket, response, "\r\n"); std::cout << "Read #1\t";// #1
 
 		// Check that response is OK.
 		std::istream response_stream(&response);
@@ -281,7 +281,7 @@ std::string client(const std::string & host, const std::string & link,
 			throw std::string("Response returned with status code ") + toStr(status_code);
 
 		// Read the response headers, which are terminated by a blank line.
-		read_until(socket, response, "\r\n\r\n"); std::cout << "Read #2/n";// #2
+		read_until(socket, response, "\r\n\r\n"); std::cout << "Read #2\t";// #2
 		// Process the response headers.
 		std::string header;
 		std::ostringstream all_responce;
@@ -290,7 +290,7 @@ std::string client(const std::string & host, const std::string & link,
 		int count = 0;
 		while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) // #3
 			all_responce << &response << "\n";
-		std::cout << "Read #3/n";
+		std::cout << "Read #3\t";
 		return all_responce.str();
 	}
 	catch (std::exception & ex)
