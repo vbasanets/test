@@ -184,7 +184,7 @@ std::string client(const std::string & host, const std::string & link)
 		boost::asio::write(socket, request);
 		// Read the response status line.
 		boost::asio::streambuf response;
-		boost::asio::read_until(socket, response, "\r\n"); std::cout << "Read #1\t";// #1
+		boost::asio::read_until(socket, response, "\r\n");
 
 		// Check that response is OK.
 		std::istream response_stream(&response);
@@ -203,15 +203,14 @@ std::string client(const std::string & host, const std::string & link)
 			throw std::string("Response returned with status code ") + toStr(status_code);
 
 		// Read the response headers, which are terminated by a blank line.
-		boost::asio::read_until(socket, response, "\r\n\r\n");	std::cout << "Read #2\t";// #2
+		boost::asio::read_until(socket, response, "\r\n\r\n");
 		// Process the response headers.
 		std::string header;
 		std::ostringstream all_responce;
 
 		// Read until EOF, writing data to output as we go.
-		while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) // #3
+		while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
 			all_responce << &response << "\n";
-		std::cout << "Read #3\t";
 		if (error != boost::asio::error::eof)
 			throw boost::system::system_error(error);
 		return all_responce.str();
@@ -264,7 +263,7 @@ std::string client(const std::string & host, const std::string & link,
 
 		// Read the response status line.
 		boost::asio::streambuf response;
-		read_until(socket, response, "\r\n"); std::cout << "Read #1\t";// #1
+		read_until(socket, response, "\r\n");
 
 		// Check that response is OK.
 		std::istream response_stream(&response);
@@ -281,16 +280,15 @@ std::string client(const std::string & host, const std::string & link,
 			throw std::string("Response returned with status code ") + toStr(status_code);
 
 		// Read the response headers, which are terminated by a blank line.
-		read_until(socket, response, "\r\n\r\n"); std::cout << "Read #2\t";// #2
+		read_until(socket, response, "\r\n\r\n");
 		// Process the response headers.
 		std::string header;
 		std::ostringstream all_responce;
 		// Read until EOF, writing data to output as we go.
 		boost::system::error_code error;
 		int count = 0;
-		while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error)) // #3
+		while (boost::asio::read(socket, response, boost::asio::transfer_at_least(1), error))
 			all_responce << &response << "\n";
-		std::cout << "Read #3\t";
 		return all_responce.str();
 	}
 	catch (std::exception & ex)
@@ -376,20 +374,52 @@ void timeDelay(size_t sec)
 	clock_t start = clock();
 	while (clock() - start < delay);
 }
-void testOut(const std::string & str, const std::string & fileName)
+struct regExAndSepar
 {
-	std::ofstream out(fileName.c_str());
+	std::vector<std::string> namesToCompare;
+};
+void testOut(const std::string & str)
+{
+	std::ofstream out("d:/outTest.txt");
 	out << str << std::endl;
 }
+class PullOutTheText
+{
+	std::string _text;
+	std::set<std::string> _setLinks;
 
-/*****************************************************
-				argv[1] - name Host
-				argv[2] - Month
-				argv[3] - year
-*****************************************************/
+public:
+	PullOutTheText(const std::string & text)
+		: _text(text) {}
+	void poll_links(const boost::regex & re, const std::string & separator,
+		const std::vector<std::string> & nameToDelete)
+	{
+		std::string temp;
+		_text = boost::regex_replace(_text, re, separator, boost::regex_constants::format_no_copy);
+		std::istringstream iss(_text);
+
+		while (getline(iss, temp))
+			std::for_each(nameToDelete.begin(), nameToDelete.end(), [&](std::string forMuch) {
+			if (boost::regex_replace(temp, re, "$1", boost::regex_constants::format_no_copy) != forMuch)
+				_setLinks.insert(temp);
+		});
+	}
+	void toTake(std::set<std::string> & selection)
+	{
+		std::for_each(_setLinks.begin(), _setLinks.end(), [&](std::string str) { selection.insert(str); });
+	}
+};
+
 int main(int argc, char * argv[])
 {
+	/*
+	argv[1] - name Host
+	argv[2] - Month
+	argv[3] - year
+	*/
 	setlocale(0, "");
+	srand((unsigned int)time(0));
+
 	if (argc != 4)
 	{
 		std::cout << "Usage: <mount> <year>\n";
@@ -397,19 +427,31 @@ int main(int argc, char * argv[])
 		std::cout << " may 2017\n";
 		return 1;
 	}
+
 	std::string host(argv[1]);
 	std::string month(argv[2]);
 	std::string year(argv[3]);
+	//Converting month name to numeric form
 	std::string monthNumerical = monthToNumber(month);
+	//Returns the number of days in a given month
 	size_t daysInMonth = countDaysInMonth(month);
+	//Key phrases for rejecting links
+	std::vector<std::string> toDelete{ "sports", "sport", "sportstable", "video", "photo"
+		"infographic", "infographics", "infographica", "digest", "editorial", "opinion",
+		"opinions", "vote", "history", "country_russia", "culture", "interview", "photonews",
+		"tech", "roundtable", "caricature", "religion", "longread"};
+
 	std::string raw;
 	boost::regex re;
 	std::set<std::string> selection;
+	
 	try
 	{
 		if (host == "inosmi.ru")
 		{
+			//The number of links in one GET-request
 			int limit = 100;
+			//First GET-request
 			std::string sufix =
 				"/services/search/getmore/?search_area=all&date_from=" +
 				year + "-" + monthNumerical +"-01" +
@@ -417,18 +459,17 @@ int main(int argc, char * argv[])
 				year + "-" + monthNumerical + "-" + toStr(daysInMonth) +
 				"&query%5B%5D=%D1%83%D0%BA%D1%80%D0%B0%D0%B8%D0%BD%D0%B0&limit=" +
 				toStr(limit);	
-			std::string prefix = "&offset=";
+			std::string prefix = "&offset=";	// Used in the "client()" function
 		
 			raw = client(host, sufix + prefix + toStr(0));
 			decodingInaSingleString(raw);
-			
 			re = boost::regex(R"#(<div\sclass=\"search__results\">.*?<span>(.*?)</span>)#");
 			raw = boost::regex_replace(raw, re, "$1", boost::regex_constants::format_no_copy);
 			
 			int sumAllPosts = pullNumber<int>(raw);
 			int sumRequests = integerPath(sumAllPosts, limit);
-			srand((unsigned int)time(0));
-			raw = "";
+
+			raw.clear();
 			for (int i = 1; i < sumRequests; ++i)
 			{
 				std::cout << "GET requests --- " << i << " --- \n";
@@ -436,8 +477,14 @@ int main(int argc, char * argv[])
 				timeDelay(rand() / 50000);
 			}
 			decodingInaSingleString(raw);
-
-			testOut(raw, "d:/outFile.txt");
+			
+			PullOutTheText pullLinks(raw);
+			pullLinks.poll_links(boost::regex(R"#(/(\w+)/\w+/\w+\.html)#"), "$0\n", toDelete);
+			pullLinks.toTake(selection);
+			
+			std::for_each(selection.begin(), selection.end(), [&](std::string str) {
+				std::ofstream out("d:/Test2.txt", std::ofstream::out | std::ofstream::app);
+				out << str << std::endl; });
 		}
 		else if (host == "ukraina.ru")
 		{
@@ -461,8 +508,8 @@ int main(int argc, char * argv[])
 			
 			int sumAllPosts = pullNumber<int>(raw);
 			int sumRequests = integerPath(sumAllPosts, limit);
-			srand((unsigned int)time(0));
-			raw = "";
+
+			raw.clear();
 			for (int i = 1; i < sumRequests; ++i)
 			{
 				std::cout << "GET requests --- " << i << " --- \n";
@@ -471,7 +518,7 @@ int main(int argc, char * argv[])
 			}
 			decodingInaSingleString(raw);
 
-			testOut(raw, "d:/outFile.txt");
+			testOut(raw);
 		}
 		else
 		{
