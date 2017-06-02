@@ -392,7 +392,7 @@ public:
 	PullOutTheText(const std::string & text)
 		: _text(text) {}
 	void poll_links(const boost::regex & re, const std::string & separator,
-		const std::vector<std::string> & nameToDelete)
+		const std::string & take, const std::vector<std::string> & nameToDelete)
 	{
 		std::string temp;
 		_text = boost::regex_replace(_text, re, separator, boost::regex_constants::format_no_copy);
@@ -400,13 +400,14 @@ public:
 
 		while (getline(iss, temp))
 			std::for_each(nameToDelete.begin(), nameToDelete.end(), [&](std::string forMuch) {
-			if (boost::regex_replace(temp, re, "$1", boost::regex_constants::format_no_copy) != forMuch)
+			if (boost::regex_replace(temp, re, take, boost::regex_constants::format_no_copy) != forMuch)
 				_setLinks.insert(temp);
 		});
 	}
 	void toTake(std::set<std::string> & selection)
 	{
-		std::for_each(_setLinks.begin(), _setLinks.end(), [&](std::string str) { selection.insert(str); });
+		std::for_each(_setLinks.begin(), _setLinks.end(),
+			[&](std::string str) { selection.insert(str); });
 	}
 };
 
@@ -459,8 +460,9 @@ int main(int argc, char * argv[])
 				year + "-" + monthNumerical + "-" + toStr(daysInMonth) +
 				"&query%5B%5D=%D1%83%D0%BA%D1%80%D0%B0%D0%B8%D0%BD%D0%B0&limit=" +
 				toStr(limit);	
-			std::string prefix = "&offset=";	// Used in the "client()" function
-		
+			//Used in the "client()" function
+			std::string prefix = "&offset=";
+			
 			raw = client(host, sufix + prefix + toStr(0));
 			decodingInaSingleString(raw);
 			re = boost::regex(R"#(<div\sclass=\"search__results\">.*?<span>(.*?)</span>)#");
@@ -474,12 +476,12 @@ int main(int argc, char * argv[])
 			{
 				std::cout << "GET requests --- " << i << " --- \n";
 				raw += client(host, sufix + prefix + toStr(i*limit));
-				timeDelay(rand() / 50000);
+				timeDelay(rand() / 5000);
 			}
 			decodingInaSingleString(raw);
 			
 			PullOutTheText pullLinks(raw);
-			pullLinks.poll_links(boost::regex(R"#(/(\w+)/\w+/\w+\.html)#"), "$0\n", toDelete);
+			pullLinks.poll_links(boost::regex(R"#(/(\w+)/\w+/\w+\.html)#"), "$0\n", "$1", toDelete);
 			pullLinks.toTake(selection);
 			
 			std::for_each(selection.begin(), selection.end(), [&](std::string str) {
