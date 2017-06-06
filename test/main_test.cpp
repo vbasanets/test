@@ -445,7 +445,7 @@ int main(int argc, char * argv[])
 	std::string raw;
 	boost::regex re;
 	std::set<std::string> selection;
-	// Beginning try-catch
+
 	try
 	{
 		if (host == "inosmi.ru")
