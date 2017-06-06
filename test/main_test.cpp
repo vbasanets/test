@@ -490,45 +490,44 @@ int main(int argc, char * argv[])
 		}
 		else if (host == "ukraina.ru")
 		{
+			//The number of links in one GET-request
+			int limit = 100;
+			//First GET-request
+			std::string sufix =
+				"/services/search/getmore/?search_area=all&date_from=" +
+				year + "-" + monthNumerical + "-01" +
+				"&date_to=" +
+				year + "-" + monthNumerical + "-" + toStr(daysInMonth) +
+				"&query%5B%5D=%D1%83%D0%BA%D1%80%D0%B0%D0%B8%D0%BD%D0%B0&limit=" +
+				toStr(limit);
+			//Used in the "client()" function
+			std::string prefix = "&offset=";
+
+			raw = client(host, sufix + prefix + toStr(0));
+			decodingInaSingleString(raw);
+			re = boost::regex(R"#(<div\sclass=\"search__results\">.*?<span>(.*?)</span>)#");
+			raw = boost::regex_replace(raw, re, "$1", boost::regex_constants::format_no_copy);
+
+			int sumAllPosts = pullNumber<int>(raw);
+			int sumRequests = integerPath(sumAllPosts, limit);
+
+			raw.clear();
+			for (int i = 1; i < sumRequests; ++i)
+			{
+				std::cout << "GET requests --- " << i << " --- \n";
+				raw += client(host, sufix + prefix + toStr(i*limit));
+				timeDelay(rand() / 5000);
+			}
+			decodingInaSingleString(raw);
+
+			PullOutTheText pullLinks(raw);
+			pullLinks.poll_links(boost::regex(R"#(/(\w+)/\w+/\w+\.html)#"), "$0\n", "$1", toDelete);
+			pullLinks.toTake(selection);
+
+			std::for_each(selection.begin(), selection.end(), [&](std::string str) {
+				std::ofstream out("d:/Test2.txt", std::ofstream::out | std::ofstream::app);
+				out << str << std::endl; });
 			
-			std::set<std::string> tempset;
-			for (size_t i = 1; i <= all_days; i++)
-			{
-				std::ostringstream oss;
-				oss << "/archive/" << numbers_to_date(2017, m_month, i, "") << "/";
-				tempset.insert(oss.str());
-			}
-			//std::ofstream out_test("D:\\out_test.txt");
-			//for (auto it = tempset.begin(); it != tempset.end(); ++it)
-			//	out_test << *it << std::endl;
-
-			for (auto it = tempset.begin(); it != tempset.end(); ++it)
-				walk_on_links(*it);
-			m_setlink = pull_unit(m_raw, R"#(<h3\s+class=\".*?\">\s?<a\s+href=\"(.*?)\">)#", "$1\n");
-			//////////////////////////////////////////////////////////////////////////////////////////////////////
-			for (auto it = m_setlink.begin(); it != m_setlink.end(); ++it)
-			{
-
-				std::cout << "	--- " << count++ << " ---\n";
-				dataFromSite dfs = get_data(*it,
-					R"#(<time datetime=\"(\d+)\.(\d+)\.(\d+)\">)#", "$1.$2.$3", "$2", "$3",	// pdate
-					R"#()#",	// country
-					R"#(<div class=\"article_person_rank\"><a.*?>(.*?)</a>)#",	// publisher
-					R"#(<p><em>.*?</em><.*?><a href=\"(.*?)\"\s)#",	// link
-					R"#(<h1>(.*?)</h1>)#",	// title
-					R"#(<p class=\"article_lead\">(.*?)</p>)#",	// subtitle
-					R"#(<div class=\"full_text\">(.*?)</div>)#");	// body
-				if (dfs.body.size() != 0 && dfs.country != "Украина" &&
-					(dfs.nameAther.size() != 0 || dfs.nameUA.size() != 0)
-					&& dfs.publisher.size() != 0)
-				{
-					m_data.push_back(dfs);
-					//save_to_file(nfile, dfs);
-					save_report(dfs, nfile);
-				}
-				system("cls");
-				//if (count == 50) break;
-			}
 		}
 		else if (host == "russian.rt.com")
 		{
