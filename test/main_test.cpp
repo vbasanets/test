@@ -445,7 +445,7 @@ int main(int argc, char * argv[])
 	std::string raw;
 	boost::regex re;
 	std::set<std::string> selection;
-	
+	// Beginning try-catch
 	try
 	{
 		if (host == "inosmi.ru")
@@ -490,6 +490,7 @@ int main(int argc, char * argv[])
 		}
 		else if (host == "ukraina.ru")
 		{
+			//Modify it!!!!!!!!!!!!!
 			//The number of links in one GET-request
 			int limit = 100;
 			//First GET-request
